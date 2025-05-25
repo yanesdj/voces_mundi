@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio + Country Map Cycle</title>
+  <meta charset="utf-8" />
+  <style>
+    #map { height: 90vh; }
+    audio { display: block; margin: 10px auto; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+  <audio id="player" controls></audio>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const countriesWithAudio = [
+      {
+        name: "Hungary",
+        audio: "https://example.com/audio/hungary.mp3"
+      },
+      {
+        name: "Brazil",
+        audio: "https://example.com/audio/brazil.mp3"
+      },
+      {
+        name: "Japan",
+        audio: "https://example.com/audio/japan.mp3"
+      }
+    ];
+
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let geoData = null;
+    let highlightLayer = null;
+
+    const audio = document.getElementById('player');
+
+    fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+      .then(res => res.json())
+      .then(data => {
+        geoData = data;
+        startCycle();
+      });
+
+    let currentIndex = 0;
+
+    function startCycle() {
+      if (!geoData) return;
+
+      const { name, audio: audioUrl } = countriesWithAudio[currentIndex];
+      const feature = geoData.features.find(f => f.properties.name === name);
+
+      if (highlightLayer) {
+        map.removeLayer(highlightLayer);
+      }
+
+      highlightLayer = L.geoJSON(feature, {
+        style: {
+          color: "blue",
+          weight: 2,
+          fillOpacity: 0.3
+        }
+      }).addTo(map);
+
+      map.fitBounds(highlightLayer.getBounds());
+
+      audio.src = audioUrl;
+      audio.play();
+
+      audio.onended = () => {
+        currentIndex = (currentIndex + 1) % countriesWithAudio.length;
+        startCycle();
+      };
+    }
+  </script>
+</body>
+</html>
